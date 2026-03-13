@@ -1,7 +1,9 @@
-import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { tavily } from '@tavily/core'
 import { env } from '@/lib/env.ts'
+import { JsonCache } from '@/lib/json-cache.ts'
+
+const cacheOnly = env.USE_TAVILY_CACHE === 'true'
 
 interface TavilySearchResult {
   results: Array<{
@@ -25,33 +27,18 @@ interface TavilyCache {
   extractions: Record<string, TavilyExtractResult['results'][number]>
 }
 
-const CACHE_PATH = resolve(process.cwd(), 'tavily-cache.json')
-
-async function readCache(): Promise<TavilyCache> {
-  try {
-    const data = await readFile(CACHE_PATH, 'utf-8')
-    return JSON.parse(data)
-  } catch {
-    return { searches: {}, extractions: {} }
-  }
-}
-
-async function persistCache(cache: TavilyCache): Promise<void> {
-  await writeFile(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf-8')
-}
-
+const cachePath = resolve(process.cwd(), 'tavily-cache.json')
+const cache = new JsonCache<TavilyCache>(cachePath)
 const client = tavily({ apiKey: env.TAVILY_API_KEY })
-
-const cacheOnly = env.USE_TAVILY_CACHE === 'true'
 
 export async function search(
   query: string,
   options?: { maxResults?: number; searchDepth?: 'basic' | 'advanced' },
 ): Promise<TavilySearchResult> {
-  const cache = await readCache()
+  const data = await cache.load()
 
-  if (cache.searches[query]) {
-    return cache.searches[query]
+  if (data.searches[query]) {
+    return data.searches[query]
   }
 
   if (cacheOnly) {
@@ -59,21 +46,21 @@ export async function search(
   }
 
   const result = await client.search(query, options)
-  cache.searches[query] = result as TavilySearchResult
-  await persistCache(cache)
+  data.searches[query] = result as TavilySearchResult
+  await cache.persist()
 
   return result as TavilySearchResult
 }
 
 export async function extract(urls: string[]): Promise<TavilyExtractResult> {
-  const cache = await readCache()
+  const data = await cache.load()
 
   const cached: TavilyExtractResult['results'] = []
   const uncached: string[] = []
 
   for (const url of urls) {
-    if (cache.extractions[url]) {
-      cached.push(cache.extractions[url])
+    if (data.extractions[url]) {
+      cached.push(data.extractions[url])
     } else {
       uncached.push(url)
     }
@@ -86,9 +73,11 @@ export async function extract(urls: string[]): Promise<TavilyExtractResult> {
   const result = await client.extract(uncached)
 
   for (const r of result.results) {
-    cache.extractions[r.url] = r as TavilyExtractResult['results'][number]
+    data.extractions[r.url] = r as TavilyExtractResult['results'][number]
   }
-  await persistCache(cache)
+  await cache.persist()
 
-  return { results: [...cached, ...result.results] as TavilyExtractResult['results'] }
+  return {
+    results: [...cached, ...result.results] as TavilyExtractResult['results'],
+  }
 }
