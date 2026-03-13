@@ -35,11 +35,14 @@ function App() {
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null)
   const [searchKey, setSearchKey] = useState(0)
+  const [exiting, setExiting] = useState(false)
   const { state, timelineProgress } = useResearch(submittedQuery, searchKey)
 
   const isResearching = submittedQuery !== null
   const isRunning =
     isResearching && state.stage !== 'complete' && state.stage !== 'error'
+  // Keep research layout until exit animations finish
+  const researchLayout = isResearching || exiting
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
@@ -49,6 +52,7 @@ function App() {
   }
 
   function handleReset() {
+    setExiting(true)
     setSubmittedQuery(null)
     setQuery('')
     setSearchKey((k) => k + 1)
@@ -58,7 +62,7 @@ function App() {
     <motion.main
       layout="position"
       className={`grid-bg ${
-        isResearching
+        researchLayout
           ? 'min-h-svh px-4 py-8'
           : 'flex min-h-svh flex-col items-center justify-center px-4 pb-24'
       }`}
@@ -66,31 +70,23 @@ function App() {
     >
       <motion.div
         layout="position"
-        className={isResearching ? 'mx-auto max-w-2xl' : 'w-full max-w-xl'}
+        className={researchLayout ? 'mx-auto max-w-2xl' : 'w-full max-w-xl'}
         transition={layoutTransition}
       >
         {/* Header */}
         <AnimatePresence mode="popLayout">
-          {!isResearching && (
-            <motion.div
+          {!researchLayout && (
+            <motion.span
               key="header"
               layout
-              className="mb-6 flex items-center gap-3"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.25, ease: easeOut }}
+              className="mb-2 block text-xs tracking-widest text-muted-foreground uppercase"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: easeOut }}
             >
-              <img
-                src="/remi-logo.svg"
-                alt="Remi"
-                className="size-6"
-              />
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-sm text-muted-foreground">
-                Research
-              </span>
-            </motion.div>
+              Research
+            </motion.span>
           )}
         </AnimatePresence>
 
@@ -98,41 +94,27 @@ function App() {
         <motion.form
           layout="position"
           onSubmit={handleSubmit}
-          className={isResearching ? 'mb-10' : ''}
+          className={researchLayout ? 'mb-10' : ''}
           transition={layoutTransition}
         >
           <motion.div layout="position" className="group relative" transition={layoutTransition}>
-            <AnimatePresence>
-              {isResearching && (
-                <motion.img
-                  key="search-logo"
-                  src="/remi-logo.svg"
-                  alt="Remi"
-                  className="absolute left-3 top-1/2 size-5 -translate-y-1/2"
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.6 }}
-                  transition={{ duration: 0.2, ease: easeOut }}
-                />
-              )}
-            </AnimatePresence>
             <input
               type="text"
               value={query}
-              onChange={(e) => !isResearching && setQuery(e.target.value)}
-              readOnly={isResearching}
+              onChange={(e) => !researchLayout && setQuery(e.target.value)}
+              readOnly={researchLayout}
               placeholder="Search a dish or ingredient..."
               className={`h-12 w-full border border-border bg-card text-sm text-foreground outline-none placeholder:text-muted-foreground transition-[border-color,padding] duration-300 ${
-                isResearching
-                  ? 'cursor-default pl-10 pr-12'
+                researchLayout
+                  ? 'cursor-default pl-4 pr-12'
                   : `${query.trim() ? 'pr-12' : 'pr-4'} pl-4 focus:border-muted-foreground/40`
               }`}
             />
             <AnimatePresence mode="wait">
-              {!isResearching && query.trim() && (
+              {!researchLayout && query.trim() && (
                 <InputAction key="submit" type="submit" title="Search" icon={ArrowRight} />
               )}
-              {isResearching &&
+              {researchLayout && !exiting &&
                 (isRunning ? (
                   <InputAction key="abort" type="button" title="Abort" onClick={handleReset} icon={Square} iconClassName="fill-current" />
                 ) : (
@@ -143,14 +125,14 @@ function App() {
         </motion.form>
 
         {/* Research results */}
-        <AnimatePresence>
+        <AnimatePresence onExitComplete={() => setExiting(false)}>
           {isResearching && (
             <motion.div
               key="results"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
             >
               {/* Error */}
               <AnimatePresence>
