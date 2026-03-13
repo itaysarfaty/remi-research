@@ -1,12 +1,27 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { RefreshCcw } from 'lucide-react'
+import { ArrowRight, type LucideIcon, RefreshCcw, Square } from 'lucide-react'
 import { useResearch } from '@/hooks/use-research'
 import { ResearchTimeline } from '@/components/research-timeline'
 import { ReportView } from '@/components/report-view'
 import { SourcesList } from '@/components/sources-list'
 
 export const Route = createFileRoute('/')({ component: App })
+
+function InputAction({
+  icon: Icon,
+  iconClassName,
+  ...props
+}: { icon: LucideIcon; iconClassName?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      {...props}
+      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+    >
+      <Icon className={`size-4 ${iconClassName ?? ''}`} />
+    </button>
+  )
+}
 
 function App() {
   const [query, setQuery] = useState('')
@@ -16,6 +31,8 @@ function App() {
   const { state, timelineProgress } = useResearch(submittedQuery, searchKey)
 
   const isResearching = submittedQuery !== null
+  const isRunning =
+    isResearching && state.stage !== 'complete' && state.stage !== 'error'
 
   function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault()
@@ -56,18 +73,18 @@ function App() {
               className={`h-14 w-full rounded-full border border-border bg-card ps-14 text-base text-foreground shadow-sm outline-none placeholder:text-muted-foreground transition-[border-color,box-shadow] duration-200 ${
                 isResearching
                   ? 'cursor-default pr-12'
-                  : 'pr-5 focus:border-primary/40 focus:ring-2 focus:ring-primary/15'
+                  : `${query.trim() ? 'pr-12' : 'pr-5'} focus:border-primary/40 focus:ring-2 focus:ring-primary/15`
               }`}
             />
-            {isResearching && (
-              <button
-                type="button"
-                onClick={handleReset}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <RefreshCcw className="size-4" />
-              </button>
+            {!isResearching && query.trim() && (
+              <InputAction type="submit" title="Search" icon={ArrowRight} />
             )}
+            {isResearching &&
+              (isRunning ? (
+                <InputAction type="button" title="Abort" onClick={handleReset} icon={Square} iconClassName="fill-current" />
+              ) : (
+                <InputAction type="button" title="Reset" onClick={handleReset} icon={RefreshCcw} />
+              ))}
           </div>
         </form>
 
