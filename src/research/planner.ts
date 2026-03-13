@@ -15,7 +15,7 @@ Rules:
 - Each topic should be specific and searchable
 - Focus on the STORY — no recipes, no nutrition facts, no cooking instructions
 - Topics should be complementary, not overlapping
-- The summary should be a short, casual paragraph (2-3 sentences) written like you're excitedly telling a friend what you're about to dig into. Mention specific interesting angles and topics — NOT the structure of the write-up. Be curious and conversational. Vary your tone and sentence structure — don't fall into a formula. Sometimes lead with a question, sometimes with a surprising fact, sometimes jump straight into what makes this subject fascinating. Never start with "Ooh" or "Let's trace".`
+- The summary should be a clear, concise definition of the dish or ingredient in 1-2 sentences. Define what it is, where it comes from, and what makes it distinctive. Write in the style of an encyclopedia entry — factual and authoritative. Do not describe what the report will cover.`
 
 const schema = z.object({
   summary: z
