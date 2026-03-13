@@ -29,36 +29,69 @@ Analyze ALL pending changes (staged, unstaged, and untracked) and group them int
 
 ## Step 3: Present the Plan
 
-Present a numbered list of proposed commits in order. For each commit:
-1. The commit message (title + optional body)
-2. The files included
-3. A brief rationale for the grouping
+Present the commit plan using this exact format. Use markdown headers, tables, and horizontal rules for clear visual separation. Do NOT number the commits — use spacing and dividers instead.
 
-Use this format:
+For each commit:
+1. An `####` header with the prefix in a code span followed by the description (e.g., `#### \`refactor\` relocate modules`)
+2. A table listing each affected file, one per row, with the action (**create**, **modify**, or **delete**) in the first column and the file path in a code span in the second column
+3. A `---` horizontal rule after each commit
 
-```
-### Commit Plan
+Example:
 
-1. **feat: add user authentication flow**
-   Files: src/auth.ts, src/components/Login.tsx, src/hooks/useAuth.ts
-   → Groups the auth feature implementation together
+---
 
-2. **chore: update dependencies and config**
-   Files: package.json, pnpm-lock.yaml, tsconfig.json
-   → Config and dependency changes separated from feature work
+#### `feat` add user authentication flow
 
-3. ...
-```
+| | |
+|---|---|
+| **create** | `src/auth.ts` |
+| **create** | `src/hooks/useAuth.ts` |
+| **modify** | `src/components/Login.tsx` |
+
+---
+
+#### `chore` update dependencies and config
+
+| | |
+|---|---|
+| **modify** | `package.json` |
+| **modify** | `pnpm-lock.yaml` |
+| **modify** | `tsconfig.json` |
+
+---
+
+IMPORTANT: Never use comma-separated file lists. Every file gets its own row in the table.
+
+### Commit message rules
+
+Every commit message MUST use a conventional commit prefix. Pick the most appropriate one:
+
+| Prefix       | Use when...                                      |
+|------------- |--------------------------------------------------|
+| `feat:`      | Adding new functionality                         |
+| `fix:`       | Fixing a bug                                     |
+| `chore:`     | Maintenance tasks, deps, config, no logic change |
+| `refactor:`  | Restructuring code without changing behavior     |
+| `docs:`      | Documentation only                               |
+| `test:`      | Adding or updating tests                         |
+| `style:`     | Formatting, whitespace, semicolons (no logic)    |
+| `perf:`      | Performance improvements                         |
+| `ci:`        | CI/CD pipeline changes                           |
+| `build:`     | Build system or external dependency changes      |
+
+Keep the subject line under 72 characters. Use imperative mood ("add", not "added"). Do not end the subject with a period.
 
 ## Step 4: Ask for User Decision
 
-After presenting the plan, ask the user to choose:
+After presenting the plan, use the `AskUserQuestion` tool to let the user pick an action interactively. Present these options:
 
-- **accept** — Execute all commits as proposed
-- **accept & push** — Execute all commits and push to the remote
-- **change** — User describes what to adjust, then you revise the plan and re-present
+- **Accept** — Execute all commits as proposed
+- **Accept & push** — Execute all commits and push to the remote
+- **Edit** — User describes adjustments, then you revise and re-present
 
-If the user passed `--push` as an argument (`$ARGUMENTS` contains `--push`), note that commits will be pushed after creation.
+If the user passed `--push` as an argument (`$ARGUMENTS` contains `--push`), skip the question and go straight to execution — commits will be pushed after creation.
+
+If the user selects "Edit" (or provides custom input via "Other"), revise the plan based on their feedback and present the updated plan again with a new `AskUserQuestion`.
 
 ## Step 5: Execute
 
@@ -79,9 +112,17 @@ When the user accepts:
 
 2. After all commits, run `git log --oneline -<N>` (where N = number of commits created) to confirm
 
-3. If the user chose "accept & push" or passed `--push`:
+3. If the user chose "Accept & push" or passed `--push`:
    - Push to the remote with `git push`
    - If no upstream is set, use `git push -u origin <branch>`
+   - If no remote repository exists yet, create one using the GitHub CLI: `gh repo create <repo-name> --private --source=. --push` (ask the user for public/private preference if unclear)
+
+## GitHub CLI
+
+Use the `gh` CLI for any GitHub operations:
+- Creating repos: `gh repo create`
+- Viewing repo info: `gh repo view`
+- If `gh` is not authenticated or unavailable, inform the user and fall back to raw git commands where possible
 
 ## Rules
 
@@ -90,5 +131,5 @@ When the user accepts:
 - NEVER amend existing commits — always create new ones
 - Do NOT commit files that likely contain secrets (`.env`, credentials, tokens). Warn the user if such files are in the changeset.
 - If a pre-commit hook fails, diagnose the issue, fix it, re-stage, and create a NEW commit
-- Follow the existing commit message style from `git log` when possible
-- Use conventional commit prefixes (feat, fix, chore, refactor, docs, test, style, perf, ci, build) when the repo doesn't have a strong existing style
+- Every commit message MUST have a conventional commit prefix (`feat:`, `fix:`, `chore:`, etc.)
+- Keep subject lines under 72 characters, imperative mood, no trailing period
