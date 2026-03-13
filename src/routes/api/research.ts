@@ -6,6 +6,7 @@ import { runGateKeeper } from '@/research/gate-keeper.ts'
 import { runPlanner } from '@/research/planner.ts'
 import { runSearcher } from '@/research/searcher.ts'
 import { runWriter } from '@/research/writer.ts'
+import { env } from '@/env'
 
 async function runResearchPipeline(
   query: string,
@@ -43,7 +44,31 @@ async function runResearchPipeline(
 
     // Stage 4: Write
     emit({ type: 'stage', stage: 'writing' })
-    await runWriter(gateKeeperResult.normalizedQuery, sources, emit)
+
+    if (env.SKIP_WRITE === 'true') {
+      const citedSources = sources.slice(0, 3)
+      const citations = citedSources.map((s) => `[${s.index}]`).join(', ')
+
+      const mockReport = [
+        `# Research Report\n\n`,
+        `This is a mock report generated with SKIP_WRITE=true. `,
+        `The search stage found ${sources.length} sources. `,
+        `Here are highlights from the top results ${citations}.\n\n`,
+        `## Key Findings\n\n`,
+        `The research uncovered interesting information across multiple sources. `,
+        `${citedSources[0] ? `According to "${citedSources[0].title}" [${citedSources[0].index}], there is substantial coverage of this topic. ` : ''}`,
+        `${citedSources[1] ? `Further details are available from "${citedSources[1].title}" [${citedSources[1].index}]. ` : ''}`,
+        `${citedSources[2] ? `Additional context can be found in "${citedSources[2].title}" [${citedSources[2].index}].` : ''}`,
+      ]
+
+      for (const delta of mockReport) {
+        emit({ type: 'report-delta', delta })
+      }
+
+      emit({ type: 'sources', sources: citedSources })
+    } else {
+      await runWriter(gateKeeperResult.normalizedQuery, sources, emit)
+    }
 
     emit({ type: 'stage', stage: 'complete' })
   } catch (error) {
