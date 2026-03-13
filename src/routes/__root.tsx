@@ -5,7 +5,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import ThemeToggle from '../components/ThemeToggle'
+import ThemeToggle from '../components/theme-toggle'
 
 import TanStackQueryProvider from '../lib/tanstack-query/root-provider'
 
