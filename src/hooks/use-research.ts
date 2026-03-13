@@ -178,7 +178,7 @@ function deriveTimelineProgress(state: ResearchState): TimelineProgress {
     key: step.key,
     label: step.key === 'searching' ? searchLabel : step.label,
     status: getGroupStatus(step.stages, stage, errorAtStage),
-    defaultExpanded: step.key !== 'writing',
+    defaultExpanded: true,
   }))
 
   const batches: SearchBatchDisplay[] = searchBatches.map((batch) => {

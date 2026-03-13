@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AsteriskRouteImport } from './routes/asterisk'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiResearchRouteImport } from './routes/api/research'
 
+const AsteriskRoute = AsteriskRouteImport.update({
+  id: '/asterisk',
+  path: '/asterisk',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +31,43 @@ const ApiResearchRoute = ApiResearchRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/asterisk': typeof AsteriskRoute
   '/api/research': typeof ApiResearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/asterisk': typeof AsteriskRoute
   '/api/research': typeof ApiResearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/asterisk': typeof AsteriskRoute
   '/api/research': typeof ApiResearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/research'
+  fullPaths: '/' | '/asterisk' | '/api/research'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/research'
-  id: '__root__' | '/' | '/api/research'
+  to: '/' | '/asterisk' | '/api/research'
+  id: '__root__' | '/' | '/asterisk' | '/api/research'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AsteriskRoute: typeof AsteriskRoute
   ApiResearchRoute: typeof ApiResearchRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/asterisk': {
+      id: '/asterisk'
+      path: '/asterisk'
+      fullPath: '/asterisk'
+      preLoaderRoute: typeof AsteriskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AsteriskRoute: AsteriskRoute,
   ApiResearchRoute: ApiResearchRoute,
 }
 export const routeTree = rootRouteImport

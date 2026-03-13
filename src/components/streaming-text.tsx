@@ -7,6 +7,8 @@ interface StreamingTextProps {
   /** Milliseconds between ticks */
   interval?: number
   className?: string
+  /** Kept for API compat but ignored — always uses line cursor */
+  blobCursor?: boolean
 }
 
 export function StreamingText({
@@ -15,18 +17,11 @@ export function StreamingText({
   interval = 16,
   className,
 }: StreamingTextProps) {
-  // If text is already available on first mount, skip the animation
-  const initialTextRef = useRef(text)
-  const [visibleLength, setVisibleLength] = useState(() =>
-    initialTextRef.current ? initialTextRef.current.length : 0,
-  )
+  const [visibleLength, setVisibleLength] = useState(0)
   const prevTextRef = useRef(text)
 
   useEffect(() => {
-    // Reset when text changes — but only animate the new portion
     if (text !== prevTextRef.current) {
-      // If text grew (streaming in), keep current position to animate the rest
-      // If text changed entirely, reset to 0
       const isAppend = text.startsWith(prevTextRef.current)
       if (!isAppend) {
         setVisibleLength(0)
@@ -43,12 +38,12 @@ export function StreamingText({
     return () => clearInterval(timer)
   }, [text, visibleLength, speed, interval])
 
+  const showCursor = visibleLength < text.length
+
   return (
     <p className={className}>
       {text.slice(0, visibleLength)}
-      {visibleLength < text.length && (
-        <span className="inline-block w-px h-3.5 bg-foreground/60 animate-pulse ml-0.5 align-text-bottom" />
-      )}
+      {showCursor && <span className="typing-cursor" />}
     </p>
   )
 }

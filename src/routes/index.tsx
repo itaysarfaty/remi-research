@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowRight, type LucideIcon, RefreshCcw, Square } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useResearch } from '@/hooks/use-research'
 import { ResearchTimeline } from '@/components/research-timeline'
 import { ReportView } from '@/components/report-view'
@@ -8,25 +9,31 @@ import { SourcesList } from '@/components/sources-list'
 
 export const Route = createFileRoute('/')({ component: App })
 
+const easeOut = [0.0, 0.0, 0.2, 1] as const
+const layoutTransition = { duration: 0.5, ease: easeOut }
+
 function InputAction({
   icon: Icon,
   iconClassName,
   ...props
 }: { icon: LucideIcon; iconClassName?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button
+    <motion.button
       {...props}
-      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ duration: 0.15 }}
+      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
     >
-      <Icon className={`size-4 ${iconClassName ?? ''}`} />
-    </button>
+      <Icon className={`size-3.5 ${iconClassName ?? ''}`} />
+    </motion.button>
   )
 }
 
 function App() {
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null)
-  // Key forces useResearch to remount with fresh state on reset
   const [searchKey, setSearchKey] = useState(0)
   const { state, timelineProgress } = useResearch(submittedQuery, searchKey)
 
@@ -48,76 +55,155 @@ function App() {
   }
 
   return (
-    <main
-      className={
+    <motion.main
+      layout="position"
+      className={`grid-bg ${
         isResearching
-          ? 'min-h-svh px-4 py-6'
+          ? 'min-h-svh px-4 py-8'
           : 'flex min-h-svh flex-col items-center justify-center px-4 pb-24'
-      }
+      }`}
+      transition={layoutTransition}
     >
-      <div className={isResearching ? 'mx-auto max-w-2xl' : 'w-full max-w-xl'}>
+      <motion.div
+        layout="position"
+        className={isResearching ? 'mx-auto max-w-2xl' : 'w-full max-w-xl'}
+        transition={layoutTransition}
+      >
+        {/* Header */}
+        <AnimatePresence mode="popLayout">
+          {!isResearching && (
+            <motion.div
+              key="header"
+              layout
+              className="mb-6 flex items-center gap-3"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25, ease: easeOut }}
+            >
+              <img
+                src="/remi-logo.svg"
+                alt="Remi"
+                className="size-6"
+              />
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-sm text-muted-foreground">
+                Research
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Search bar */}
-        <form onSubmit={handleSubmit} className={isResearching ? 'mb-8' : ''}>
-          <div className="group relative">
-            <img
-              src="/remi-logo.svg"
-              alt="Remi"
-              className="absolute left-4 top-1/2 size-7 -translate-y-1/2"
-            />
+        <motion.form
+          layout="position"
+          onSubmit={handleSubmit}
+          className={isResearching ? 'mb-10' : ''}
+          transition={layoutTransition}
+        >
+          <motion.div layout="position" className="group relative" transition={layoutTransition}>
+            <AnimatePresence>
+              {isResearching && (
+                <motion.img
+                  key="search-logo"
+                  src="/remi-logo.svg"
+                  alt="Remi"
+                  className="absolute left-3 top-1/2 size-5 -translate-y-1/2"
+                  initial={{ opacity: 0, scale: 0.6 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.6 }}
+                  transition={{ duration: 0.2, ease: easeOut }}
+                />
+              )}
+            </AnimatePresence>
             <input
               type="text"
               value={query}
               onChange={(e) => !isResearching && setQuery(e.target.value)}
               readOnly={isResearching}
               placeholder="Search a dish or ingredient..."
-              className={`h-14 w-full rounded-full border border-border bg-card ps-14 text-base text-foreground shadow-sm outline-none placeholder:text-muted-foreground transition-[border-color,box-shadow] duration-200 ${
+              className={`h-12 w-full border border-border bg-card text-sm text-foreground outline-none placeholder:text-muted-foreground transition-[border-color,padding] duration-300 ${
                 isResearching
-                  ? 'cursor-default pr-12'
-                  : `${query.trim() ? 'pr-12' : 'pr-5'} focus:border-primary/40 focus:ring-2 focus:ring-primary/15`
+                  ? 'cursor-default pl-10 pr-12'
+                  : `${query.trim() ? 'pr-12' : 'pr-4'} pl-4 focus:border-muted-foreground/40`
               }`}
             />
-            {!isResearching && query.trim() && (
-              <InputAction type="submit" title="Search" icon={ArrowRight} />
-            )}
-            {isResearching &&
-              (isRunning ? (
-                <InputAction type="button" title="Abort" onClick={handleReset} icon={Square} iconClassName="fill-current" />
-              ) : (
-                <InputAction type="button" title="Reset" onClick={handleReset} icon={RefreshCcw} />
-              ))}
-          </div>
-        </form>
+            <AnimatePresence mode="wait">
+              {!isResearching && query.trim() && (
+                <InputAction key="submit" type="submit" title="Search" icon={ArrowRight} />
+              )}
+              {isResearching &&
+                (isRunning ? (
+                  <InputAction key="abort" type="button" title="Abort" onClick={handleReset} icon={Square} iconClassName="fill-current" />
+                ) : (
+                  <InputAction key="reset" type="button" title="Reset" onClick={handleReset} icon={RefreshCcw} />
+                ))}
+            </AnimatePresence>
+          </motion.div>
+        </motion.form>
 
         {/* Research results */}
-        {isResearching && (
-          <>
-            {/* Error */}
-            {state.error && (
-              <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {state.error}
-              </div>
-            )}
+        <AnimatePresence>
+          {isResearching && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Error */}
+              <AnimatePresence>
+                {state.error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25, ease: easeOut }}
+                    className="mb-6 overflow-hidden"
+                  >
+                    <div className="border-l-2 border-destructive/40 px-4 py-3 text-sm text-destructive">
+                      {state.error}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            {/* Timeline */}
-            {state.stage !== 'idle' && (
-              <div className="mb-8 rounded-xl border bg-card p-5 shadow-sm">
-                <ResearchTimeline progress={timelineProgress} />
-              </div>
-            )}
+              {/* Timeline */}
+              <AnimatePresence>
+                {state.stage !== 'idle' && (
+                  <motion.div
+                    key="timeline"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: 0.5, ease: easeOut }}
+                  >
+                    <ResearchTimeline progress={timelineProgress} hasReport={!!state.report} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            {/* Report */}
-            {state.report && (
-              <div className="rounded-xl border bg-card p-6 shadow-sm">
-                <ReportView
-                  report={state.report}
-                  sources={state.citedSources}
-                />
-                <SourcesList sources={state.citedSources} />
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </main>
+              {/* Report + sources */}
+              <AnimatePresence>
+                {state.report && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: easeOut }}
+                    className="mt-8"
+                  >
+                    <ReportView
+                      report={state.report}
+                      sources={state.citedSources}
+                    />
+                    <SourcesList sources={state.citedSources} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </motion.main>
   )
 }
