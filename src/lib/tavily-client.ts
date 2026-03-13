@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { tavily } from '@tavily/core'
-import { env } from '@/lib/env.ts'
+import { env } from '@/env'
 import { JsonCache } from '@/lib/json-cache.ts'
 
 const cacheOnly = env.USE_TAVILY_CACHE === 'true'
