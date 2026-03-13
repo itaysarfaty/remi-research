@@ -13,7 +13,7 @@ function App() {
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null)
   // Key forces useResearch to remount with fresh state on reset
   const [searchKey, setSearchKey] = useState(0)
-  const state = useResearch(submittedQuery, searchKey)
+  const { state, timelineProgress } = useResearch(submittedQuery, searchKey)
 
   const isResearching = submittedQuery !== null
 
@@ -84,7 +84,7 @@ function App() {
             {/* Timeline */}
             {state.stage !== 'idle' && (
               <div className="mb-8 rounded-xl border bg-card p-5 shadow-sm">
-                <ResearchTimeline state={state} />
+                <ResearchTimeline progress={timelineProgress} />
               </div>
             )}
 

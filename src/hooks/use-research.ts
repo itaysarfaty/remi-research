@@ -1,5 +1,13 @@
-import { useReducer, useEffect } from 'react'
-import type { ResearchState, ResearchEvent } from '@/types'
+import { useReducer, useEffect, useMemo } from 'react'
+import type {
+  ResearchState,
+  ResearchEvent,
+  ResearchStage,
+  TimelineProgress,
+  TimelineStep,
+  StepStatus,
+  SearchBatchDisplay,
+} from '@/types'
 
 const initialState: ResearchState = {
   stage: 'idle',
@@ -56,6 +64,84 @@ function reducer(state: ResearchState, event: Action): ResearchState {
       return { ...state, citedSources: event.sources }
     case 'error':
       return { ...state, error: event.message }
+  }
+}
+
+const uiSteps = [
+  { key: 'planning' as const, label: 'Planning research', stages: ['validating', 'planning'] as ResearchStage[] },
+  { key: 'searching' as const, label: 'Searching the web', stages: ['searching', 'extracting'] as ResearchStage[] },
+  { key: 'writing' as const, label: 'Writing report', stages: ['writing'] as ResearchStage[] },
+]
+
+const allStagesOrdered: ResearchStage[] = [
+  'validating', 'planning', 'searching', 'extracting', 'writing', 'complete',
+]
+
+function getGroupStatus(
+  groupStages: ResearchStage[],
+  currentStage: ResearchStage,
+  errorAtStage: ResearchStage | null,
+): StepStatus {
+  const firstIdx = allStagesOrdered.indexOf(groupStages[0])
+  const lastIdx = allStagesOrdered.indexOf(groupStages[groupStages.length - 1])
+  const currentIdx = allStagesOrdered.indexOf(currentStage)
+
+  if (currentStage === 'error' && errorAtStage) {
+    const errorIdx = allStagesOrdered.indexOf(errorAtStage)
+    if (errorIdx > lastIdx) return 'complete'
+    if (errorIdx >= firstIdx) return 'error'
+    return 'pending'
+  }
+
+  if (currentIdx > lastIdx) return 'complete'
+  if (currentIdx >= firstIdx) return 'active'
+  return 'pending'
+}
+
+function dedupliceDomains(urls: Array<{ url: string; title: string }>) {
+  const seen = new Set<string>()
+  const result: Array<{ domain: string; url: string; title: string }> = []
+  for (const u of urls) {
+    try {
+      const domain = new URL(u.url).hostname
+      if (!seen.has(domain)) {
+        seen.add(domain)
+        result.push({ domain, url: u.url, title: u.title })
+      }
+    } catch {
+      // skip invalid urls
+    }
+  }
+  return result
+}
+
+function deriveTimelineProgress(state: ResearchState): TimelineProgress {
+  const { stage, errorAtStage, plan, searchBatches, batchUrls, searchResultsCount } = state
+
+  const searchLabel = searchResultsCount > 0
+    ? `Searching · ${searchResultsCount} sources`
+    : 'Searching the web'
+
+  const steps: TimelineStep[] = uiSteps.map((step) => ({
+    key: step.key,
+    label: step.key === 'searching' ? searchLabel : step.label,
+    status: getGroupStatus(step.stages, stage, errorAtStage),
+    defaultExpanded: step.key !== 'writing',
+  }))
+
+  const batches: SearchBatchDisplay[] = searchBatches.map((batch) => {
+    const result = batchUrls.find((b) => b.batchIndex === batch.batchIndex)
+    return {
+      label: batch.label,
+      queries: batch.queries,
+      sites: result ? dedupliceDomains(result.urls) : null,
+    }
+  })
+
+  return {
+    steps,
+    planSummary: plan?.summary ?? null,
+    searchBatches: batches,
   }
 }
 
@@ -132,5 +218,10 @@ export function useResearch(query: string | null, key: number = 0) {
     return () => controller.abort()
   }, [query, key])
 
-  return state
+  const timelineProgress = useMemo(
+    () => deriveTimelineProgress(state),
+    [state.stage, state.errorAtStage, state.plan, state.searchBatches, state.batchUrls, state.searchResultsCount],
+  )
+
+  return { state, timelineProgress }
 }

@@ -57,6 +57,29 @@ export type ResearchEvent =
   | { type: 'sources'; sources: ResearchSource[] }
   | { type: 'error'; message: string }
 
+// Timeline progress model — display-ready view of ResearchState
+export type StepStatus = 'pending' | 'active' | 'complete' | 'error'
+
+export interface TimelineStep {
+  key: 'planning' | 'searching' | 'writing'
+  label: string
+  status: StepStatus
+  defaultExpanded: boolean
+}
+
+export interface SearchBatchDisplay {
+  label: string
+  queries: string[]
+  /** Pre-deduplicated domains, or null if still loading */
+  sites: Array<{ domain: string; url: string; title: string }> | null
+}
+
+export interface TimelineProgress {
+  steps: TimelineStep[]
+  planSummary: string | null
+  searchBatches: SearchBatchDisplay[]
+}
+
 // Client-side state managed by useReducer
 export interface ResearchState {
   stage: ResearchStage
