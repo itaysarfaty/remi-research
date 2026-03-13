@@ -26,14 +26,27 @@ interface TavilyCache {
 const cachePath = resolve(process.cwd(), 'tavily-cache.json')
 let data: TavilyCache | null = null
 
+const defaultCache: TavilyCache = {
+  searches: {},
+  extractions: {},
+}
+
+const cacheIsEmpty = (cache: TavilyCache): boolean => {
+  return (
+    Object.keys(cache.searches).length === 0 &&
+    Object.keys(cache.extractions).length === 0
+  )
+}
+
 export async function load(): Promise<TavilyCache> {
   if (data) return data
 
   try {
     const raw = await readFile(cachePath, 'utf-8')
-    data = JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    data = cacheIsEmpty(parsed) ? defaultCache : parsed
   } catch {
-    data = { searches: {}, extractions: {} }
+    data = defaultCache
   }
 
   return data!
