@@ -44,6 +44,7 @@ export async function extract(
   term: string,
   urls: string[],
 ): Promise<TavilyExtractResult> {
+  // TODO: consider using extractDepth: 'advanced' for JS-rendered pages
   const result = await client.extract(urls)
 
   const data = await load(term)

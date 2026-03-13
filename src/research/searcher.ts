@@ -31,7 +31,7 @@ const queryBatchesSchema = z.object({
   batches: z.array(
     z.object({
       label: z.string(),
-      queries: z.array(z.string()),
+      queries: z.array(z.string().max(400)),
     }),
   ),
 })
@@ -115,35 +115,40 @@ export async function runSearcher(
     output.batches.map((b) => ({ label: b.label, queries: b.queries })),
   )
 
-  // Search in batches
+  // Search all batches in parallel
   const allUrls = new Map<
     string,
     { title: string; url: string; score: number }
   >()
 
-  for (let i = 0; i < output.batches.length; i++) {
-    const batch = output.batches[i]
-    const searchBatch: SearchBatch = {
-      batchIndex: i,
-      label: batch.label,
-      queries: batch.queries,
-    }
-    callbacks.onBatch(searchBatch)
+  const batchResults = await Promise.all(
+    output.batches.map(async (batch, i) => {
+      const searchBatch: SearchBatch = {
+        batchIndex: i,
+        label: batch.label,
+        queries: batch.queries,
+      }
+      callbacks.onBatch(searchBatch)
 
-    const results = await Promise.all(
-      batch.queries.map((q) =>
-        tavilyClient
-          .search(plan.query, q, { maxResults: 5, searchDepth: 'advanced' })
-          .catch(() => ({
-            results: [] as Array<{
-              url: string
-              title: string
-              score: number
-            }>,
-          })),
-      ),
-    )
+      const results = await Promise.all(
+        batch.queries.map((q) =>
+          tavilyClient
+            .search(plan.query, q, { maxResults: 5, searchDepth: 'advanced' })
+            .catch(() => ({
+              results: [] as Array<{
+                url: string
+                title: string
+                score: number
+              }>,
+            })),
+        ),
+      )
 
+      return { batchIndex: i, results }
+    }),
+  )
+
+  for (const { batchIndex, results } of batchResults) {
     const batchNewUrls: SearchUrl[] = []
 
     for (const result of results) {
@@ -158,13 +163,15 @@ export async function runSearcher(
       }
     }
 
-    callbacks.onBatchUrls(i, batchNewUrls)
+    callbacks.onBatchUrls(batchIndex, batchNewUrls)
   }
 
   callbacks.onSearchResults(allUrls.size)
 
-  // Rank by Tavily relevance score and take the top sources
-  const rankedUrls = [...allUrls.values()].sort((a, b) => b.score - a.score)
+  // Rank by Tavily relevance score, filter low-relevance, take top sources
+  const rankedUrls = [...allUrls.values()]
+    .filter((u) => u.score > 0.5)
+    .sort((a, b) => b.score - a.score)
   const urlsToExtract = rankedUrls.slice(0, 20)
   callbacks.onStartExtraction()
 
@@ -178,6 +185,7 @@ export async function runSearcher(
 
   for (const chunk of chunks) {
     try {
+      // NOTE: extract response also contains failed_results for individual URL failures
       const extracted = await tavilyClient.extract(plan.query, chunk.map((u) => u.url))
 
       for (const result of extracted.results) {

@@ -31,7 +31,7 @@ interface TavilyCacheEntry {
 
 type TavilyCache = Record<string, TavilyCacheEntry>
 
-const cachePath = resolve(process.cwd(), 'tavily-cache.json')
+const cachePath = resolve(import.meta.dirname, '../../tavily-cache.json')
 let store: TavilyCache | null = null
 
 async function loadStore(): Promise<TavilyCache> {
