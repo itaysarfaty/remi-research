@@ -33,7 +33,7 @@ Present the commit plan using this exact format. Use markdown headers, tables, a
 
 For each commit:
 1. An `####` header with the prefix in a code span followed by the description (e.g., `#### \`refactor\` relocate modules`)
-2. A table listing each affected file, one per row, with the action (**create**, **modify**, or **delete**) in the first column and the file path in a code span in the second column
+2. A diff code block listing each affected file, one per line, prefixed with `+` for new files, `~` for modified files, or `-` for deleted files
 3. A `---` horizontal rule after each commit
 
 Example:
@@ -42,25 +42,28 @@ Example:
 
 #### `feat` add user authentication flow
 
-| | |
-|---|---|
-| **create** | `src/auth.ts` |
-| **create** | `src/hooks/useAuth.ts` |
-| **modify** | `src/components/Login.tsx` |
+```diff
++ src/auth.ts
++ src/hooks/useAuth.ts
+! src/components/Login.tsx
+- src/old/legacy-auth.ts
+```
 
 ---
 
 #### `chore` update dependencies and config
 
-| | |
-|---|---|
-| **modify** | `package.json` |
-| **modify** | `pnpm-lock.yaml` |
-| **modify** | `tsconfig.json` |
+```diff
+! package.json
+! pnpm-lock.yaml
+! tsconfig.json
+```
 
 ---
 
-IMPORTANT: Never use comma-separated file lists. Every file gets its own row in the table.
+Key: `+` = new file (green), `!` = modified file (orange), `-` = deleted file (red)
+
+IMPORTANT: Never use comma-separated file lists. Every file gets its own line.
 
 ### Commit message rules
 
