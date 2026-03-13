@@ -1,8 +1,7 @@
-import { runGateKeeper } from '@/research/ai/gate-keeper'
-import { runPlanner } from '@/research/ai/planner'
-import { runSearcher } from '@/research/ai/searcher'
-import { readCache, writeCache } from '@/research/ai/tavily-cache'
-import type { ResearchEvent, SearchBatch, ResearchSource } from '@/types'
+import { runGateKeeper } from '@/research/gate-keeper'
+import { runPlanner } from '@/research/planner'
+import { runSearcher } from '@/research/searcher'
+import type { ResearchEvent } from '@/types'
 
 const query = process.argv[2]
 
@@ -12,14 +11,6 @@ if (!query) {
 }
 
 console.log(`\nResearching: "${query}"\n`)
-
-// Collect searcher events for caching
-const searchBatches: SearchBatch[] = []
-const batchUrls: Array<{
-  batchIndex: number
-  urls: Array<{ url: string; title: string }>
-}> = []
-let searchResultsCount = 0
 
 const emit = (event: ResearchEvent) => {
   switch (event.type) {
@@ -40,17 +31,14 @@ const emit = (event: ResearchEvent) => {
       console.log(
         `  [search] Batch ${event.batch.batchIndex}: ${event.batch.label} (${event.batch.queries.length} queries)`,
       )
-      searchBatches.push(event.batch)
       break
     case 'batch-urls':
       console.log(
         `  [urls] Batch ${event.batchIndex}: ${event.urls.length} new URLs`,
       )
-      batchUrls.push({ batchIndex: event.batchIndex, urls: event.urls })
       break
     case 'search-results':
       console.log(`  [results] ${event.count} total unique URLs`)
-      searchResultsCount = event.count
       break
     case 'extraction-progress':
       console.log(
@@ -84,30 +72,16 @@ async function main() {
   const plan = await runPlanner(gateKeeperResult.normalizedQuery)
   emit({ type: 'plan', plan })
 
-  // Stage 3: Search
+  // Stage 3: Search (tavily-client caches each API call automatically)
   console.log('\nStage 3: Searching...')
-  const sources: ResearchSource[] = await runSearcher(plan, emit)
+  const sources = await runSearcher(plan, emit)
 
   if (sources.length === 0) {
     console.error('\nNo sources found.')
     process.exit(1)
   }
 
-  console.log(`\nFound ${sources.length} sources. Writing to cache...`)
-
-  // Write to cache
-  const cache = await readCache()
-  cache[gateKeeperResult.normalizedQuery] = {
-    sources,
-    searchBatches,
-    batchUrls,
-    searchResultsCount,
-  }
-  await writeCache(cache)
-
-  console.log(
-    `\nCached "${gateKeeperResult.normalizedQuery}" to tavily-cache.json`,
-  )
+  console.log(`\nDone! ${sources.length} sources cached in tavily-cache.json`)
 }
 
 main().catch((err) => {
