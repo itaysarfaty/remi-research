@@ -45,12 +45,7 @@ async function runResearchPipeline(
     emit({ type: 'gate-keeper', result: gateKeeperResult })
 
     if (!gateKeeperResult.valid) {
-      emit({
-        type: 'error',
-        message: gateKeeperResult.reason || 'Invalid query',
-      })
-      emit({ type: 'stage', stage: 'error' })
-      return
+      throw new Error(gateKeeperResult.reason || 'Invalid query')
     }
 
     // Stage 2: Plan
@@ -63,9 +58,7 @@ async function runResearchPipeline(
     const sources = await runSearcher(plan, emit)
 
     if (sources.length === 0) {
-      emit({ type: 'error', message: 'No sources found for this topic.' })
-      emit({ type: 'stage', stage: 'error' })
-      return
+      throw new Error('No sources found for this topic.')
     }
 
     // Stage 4: Write
@@ -80,7 +73,6 @@ async function runResearchPipeline(
     emit({ type: 'stage', stage: 'complete' })
   } catch (error) {
     emit({ type: 'error', message: getErrorMessage(error) })
-    emit({ type: 'stage', stage: 'error' })
   }
 }
 

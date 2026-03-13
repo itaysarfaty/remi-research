@@ -55,9 +55,6 @@ function reducer(state: ResearchState, event: Action): ResearchState {
     case 'reset':
       return initialState
     case 'stage':
-      if (event.stage === 'error') {
-        return { ...state, stage: 'error', errorAtStage: state.stage }
-      }
       return { ...state, stage: event.stage }
     case 'gate-keeper':
       return { ...state, gateKeeperResult: event.result }
@@ -88,7 +85,7 @@ function reducer(state: ResearchState, event: Action): ResearchState {
     case 'sources':
       return { ...state, citedSources: event.sources }
     case 'error':
-      return { ...state, error: event.message }
+      return { ...state, error: event.message, stage: 'error', errorAtStage: state.stage }
   }
 }
 
@@ -194,7 +191,6 @@ export function useResearch(query: string | null, key: number = 0) {
             type: 'error',
             message: `Failed to start research (${response.status})`,
           })
-          dispatch({ type: 'stage', stage: 'error' })
           return
         }
 
@@ -234,7 +230,6 @@ export function useResearch(query: string | null, key: number = 0) {
       } catch (err) {
         if (isAbortError(err)) return
         dispatch({ type: 'error', message: 'Connection lost' })
-        dispatch({ type: 'stage', stage: 'error' })
       }
     }
 
