@@ -14,16 +14,14 @@ export interface GateKeeperResult {
   normalizedQuery: string
 }
 
-export interface PlannerTopic {
-  section: 'overview' | 'origin' | 'today'
-  topic: string
-  description: string
-}
-
 export interface ResearchPlan {
   query: string
   summary: string
-  topics: PlannerTopic[]
+  topics: Array<{
+    section: 'overview' | 'origin' | 'today'
+    topic: string
+    description: string
+  }>
 }
 
 export interface SearchUrl {
@@ -35,11 +33,6 @@ export interface SearchBatch {
   batchIndex: number
   label: string
   queries: string[]
-}
-
-export interface SearchBatchResult {
-  batchIndex: number
-  urls: SearchUrl[]
 }
 
 export interface ResearchSource {
@@ -85,18 +78,3 @@ export interface TimelineProgress {
   searchBatches: SearchBatchDisplay[]
 }
 
-// Client-side state managed by useReducer
-export interface ResearchState {
-  stage: PipelineStage
-  /** The last stage before an error occurred */
-  errorAtStage: PipelineStage | null
-  gateKeeperResult: GateKeeperResult | null
-  plan: ResearchPlan | null
-  searchBatches: SearchBatch[]
-  batchUrls: SearchBatchResult[]
-  searchResultsCount: number
-  extractionProgress: { extracted: number; total: number } | null
-  report: string
-  citedSources: ResearchSource[]
-  error: string | null
-}

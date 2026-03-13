@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Circle, Loader2, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils.ts'
-
-type StepStatus = 'pending' | 'active' | 'complete' | 'error'
+import type { StepStatus } from '@/types'
 
 interface TimelineStepProps {
   label: string

@@ -1,15 +1,38 @@
 import { useReducer, useEffect, useMemo } from 'react'
 import { isAbortError } from '@/lib/utils'
 import type {
-  ResearchState,
   StreamEvent,
   PipelineStage,
+  GateKeeperResult,
+  ResearchPlan,
+  SearchBatch,
   SearchUrl,
+  ResearchSource,
   TimelineProgress,
   TimelineStep,
   StepStatus,
   SearchBatchDisplay,
 } from '@/types'
+
+interface SearchBatchResult {
+  batchIndex: number
+  urls: SearchUrl[]
+}
+
+interface ResearchState {
+  stage: PipelineStage
+  /** The last stage before an error occurred */
+  errorAtStage: PipelineStage | null
+  gateKeeperResult: GateKeeperResult | null
+  plan: ResearchPlan | null
+  searchBatches: SearchBatch[]
+  batchUrls: SearchBatchResult[]
+  searchResultsCount: number
+  extractionProgress: { extracted: number; total: number } | null
+  report: string
+  citedSources: ResearchSource[]
+  error: string | null
+}
 
 const initialState: ResearchState = {
   stage: 'idle',
