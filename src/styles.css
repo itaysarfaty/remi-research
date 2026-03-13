@@ -172,7 +172,7 @@ code {
   content: '';
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse 50% 50% at 50% 50%, var(--background) 20%, transparent 70%);
+  background: radial-gradient(ellipse 50% 70% at 50% 50%, var(--background) 20%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
