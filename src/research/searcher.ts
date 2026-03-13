@@ -1,14 +1,23 @@
 import { generateText, Output } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { z } from 'zod/v4'
-import { SEARCH_QUERY_SYSTEM } from './prompts.ts'
-import * as tavilyClient from './tavily-client.ts'
+import * as tavilyClient from '@/lib/tavily-client.ts'
 import type {
   ResearchPlan,
   SearchBatch,
   ResearchSource,
   ResearchEvent,
 } from '@/types'
+
+const SEARCH_QUERY_SYSTEM = `You are a search query generator for culinary research. Given a list of research topics about a dish or ingredient, generate web search queries that will find high-quality, informative content.
+
+Rules:
+- Generate exactly 4 batches of 8 queries each (32 total)
+- Each batch must have a short label (2-4 words) describing the angle it covers (e.g., "Historical origins", "Regional variations", "Cultural significance", "Modern evolution")
+- Queries should be specific and varied to maximize coverage
+- Include queries targeting historical sources, academic articles, food journalism, and cultural perspectives
+- Avoid queries that would primarily return recipes or nutrition information
+- Each query should be a natural search string (not boolean operators)`
 
 const queryBatchesSchema = z.object({
   batches: z.array(
