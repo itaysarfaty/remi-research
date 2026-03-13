@@ -1,8 +1,10 @@
 import { useReducer, useEffect, useMemo } from 'react'
+import { isAbortError } from '@/lib/utils'
 import type {
   ResearchState,
   StreamEvent,
   PipelineStage,
+  SearchUrl,
   TimelineProgress,
   TimelineStep,
   StepStatus,
@@ -98,7 +100,7 @@ function getGroupStatus(
   return 'pending'
 }
 
-function dedupliceDomains(urls: Array<{ url: string; title: string }>) {
+function dedupliceDomains(urls: SearchUrl[]) {
   const seen = new Set<string>()
   const result: Array<{ domain: string; url: string; title: string }> = []
   for (const u of urls) {
@@ -207,7 +209,7 @@ export function useResearch(query: string | null, key: number = 0) {
           }
         }
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (isAbortError(err)) return
         dispatch({ type: 'error', message: 'Connection lost' })
         dispatch({ type: 'stage', stage: 'error' })
       }

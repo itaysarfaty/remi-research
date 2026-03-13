@@ -26,6 +26,11 @@ export interface ResearchPlan {
   topics: PlannerTopic[]
 }
 
+export interface SearchUrl {
+  url: string
+  title: string
+}
+
 export interface SearchBatch {
   batchIndex: number
   label: string
@@ -34,7 +39,7 @@ export interface SearchBatch {
 
 export interface SearchBatchResult {
   batchIndex: number
-  urls: Array<{ url: string; title: string }>
+  urls: SearchUrl[]
 }
 
 export interface ResearchSource {
@@ -50,7 +55,7 @@ export type StreamEvent =
   | { type: 'gate-keeper'; result: GateKeeperResult }
   | { type: 'plan'; plan: ResearchPlan }
   | { type: 'search-batch'; batch: SearchBatch }
-  | { type: 'batch-urls'; batchIndex: number; urls: Array<{ url: string; title: string }> }
+  | { type: 'batch-urls'; batchIndex: number; urls: SearchUrl[] }
   | { type: 'search-results'; count: number }
   | { type: 'extraction-progress'; extracted: number; total: number }
   | { type: 'report-delta'; delta: string }

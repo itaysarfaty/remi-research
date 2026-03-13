@@ -5,6 +5,7 @@ import * as tavilyClient from '@/lib/tavily-client.ts'
 import type {
   ResearchPlan,
   SearchBatch,
+  SearchUrl,
   ResearchSource,
   StreamEvent,
 } from '@/types'
@@ -73,7 +74,7 @@ export async function runSearcher(
       ),
     )
 
-    const batchNewUrls: Array<{ url: string; title: string }> = []
+    const batchNewUrls: SearchUrl[] = []
 
     for (const result of results) {
       for (const r of result.results) {
