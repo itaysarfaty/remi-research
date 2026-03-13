@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/lib/utils'
 import type { ResearchEvent } from '@/types'
 import { runGateKeeper } from './gate-keeper.ts'
 import { runPlanner } from './planner.ts'
@@ -44,9 +45,7 @@ export async function runResearchPipeline(
 
     emit({ type: 'stage', stage: 'complete' })
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'An unexpected error occurred'
-    emit({ type: 'error', message })
+    emit({ type: 'error', message: getErrorMessage(error) })
     emit({ type: 'stage', stage: 'error' })
   }
 }
