@@ -10,7 +10,7 @@
     "lint": "eslint",
     "format": "prettier --check .",
     "check": "prettier --write . && eslint --fix",
-    "cache-research": "tsx --env-file=.env src/scripts/cache-research.ts"
+    "cache-research": "USE_TAVILY_CACHE=false tsx --env-file=.env src/lib/cache-research.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.41",
