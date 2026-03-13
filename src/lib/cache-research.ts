@@ -74,7 +74,15 @@ async function main() {
 
   // Stage 3: Search (tavily-client caches each API call automatically)
   console.log('\nStage 3: Searching...')
-  const sources = await runSearcher(plan, emit)
+  const sources = await runSearcher(plan, {
+    onBatch: (batch) => emit({ type: 'search-batch', batch }),
+    onBatchUrls: (batchIndex, urls) =>
+      emit({ type: 'batch-urls', batchIndex, urls }),
+    onSearchResults: (count) => emit({ type: 'search-results', count }),
+    onStartExtraction: () => emit({ type: 'stage', stage: 'extracting' }),
+    onExtractionProgress: (extracted, total) =>
+      emit({ type: 'extraction-progress', extracted, total }),
+  })
 
   if (sources.length === 0) {
     console.error('\nNo sources found.')

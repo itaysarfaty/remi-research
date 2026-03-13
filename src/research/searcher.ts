@@ -7,8 +7,15 @@ import type {
   SearchBatch,
   SearchUrl,
   ResearchSource,
-  StreamEvent,
 } from '@/types'
+
+export interface SearcherCallbacks {
+  onBatch: (batch: SearchBatch) => void
+  onBatchUrls: (batchIndex: number, urls: SearchUrl[]) => void
+  onSearchResults: (count: number) => void
+  onStartExtraction: () => void
+  onExtractionProgress: (extracted: number, total: number) => void
+}
 
 const SEARCH_QUERY_SYSTEM = `You are a search query generator for culinary research. Given a list of research topics about a dish or ingredient, generate web search queries that will find high-quality, informative content.
 
@@ -31,7 +38,7 @@ const queryBatchesSchema = z.object({
 
 async function runSearcherFromCache(
   plan: ResearchPlan,
-  emit: (event: StreamEvent) => void,
+  callbacks: SearcherCallbacks,
 ): Promise<ResearchSource[]> {
   const cached = await tavilyClient.loadCached(plan.query)
 
@@ -40,13 +47,10 @@ async function runSearcherFromCache(
   for (let i = 0; i < cached.batches.length; i++) {
     const batch = cached.batches[i]
 
-    emit({
-      type: 'search-batch',
-      batch: {
-        batchIndex: i,
-        label: batch.label,
-        queries: batch.queries,
-      },
+    callbacks.onBatch({
+      batchIndex: i,
+      label: batch.label,
+      queries: batch.queries,
     })
 
     const batchNewUrls: SearchUrl[] = []
@@ -63,11 +67,11 @@ async function runSearcherFromCache(
       }
     }
 
-    emit({ type: 'batch-urls', batchIndex: i, urls: batchNewUrls })
+    callbacks.onBatchUrls(i, batchNewUrls)
   }
 
-  emit({ type: 'search-results', count: allUrls.size })
-  emit({ type: 'stage', stage: 'extracting' })
+  callbacks.onSearchResults(allUrls.size)
+  callbacks.onStartExtraction()
 
   const extractions = Object.values(cached.extractions)
   const sources: ResearchSource[] = extractions.map((r, i) => {
@@ -80,21 +84,17 @@ async function runSearcherFromCache(
     }
   })
 
-  emit({
-    type: 'extraction-progress',
-    extracted: sources.length,
-    total: sources.length,
-  })
+  callbacks.onExtractionProgress(sources.length, sources.length)
 
   return sources
 }
 
 export async function runSearcher(
   plan: ResearchPlan,
-  emit: (event: StreamEvent) => void,
+  callbacks: SearcherCallbacks,
 ): Promise<ResearchSource[]> {
   if (tavilyClient.useCache) {
-    return runSearcherFromCache(plan, emit)
+    return runSearcherFromCache(plan, callbacks)
   }
 
   // Generate search queries
@@ -128,7 +128,7 @@ export async function runSearcher(
       label: batch.label,
       queries: batch.queries,
     }
-    emit({ type: 'search-batch', batch: searchBatch })
+    callbacks.onBatch(searchBatch)
 
     const results = await Promise.all(
       batch.queries.map((q) =>
@@ -158,15 +158,15 @@ export async function runSearcher(
       }
     }
 
-    emit({ type: 'batch-urls', batchIndex: i, urls: batchNewUrls })
+    callbacks.onBatchUrls(i, batchNewUrls)
   }
 
-  emit({ type: 'search-results', count: allUrls.size })
+  callbacks.onSearchResults(allUrls.size)
 
   // Rank by Tavily relevance score and take the top sources
   const rankedUrls = [...allUrls.values()].sort((a, b) => b.score - a.score)
   const urlsToExtract = rankedUrls.slice(0, 20)
-  emit({ type: 'stage', stage: 'extracting' })
+  callbacks.onStartExtraction()
 
   const extractedSources: ResearchSource[] = []
 
@@ -193,11 +193,7 @@ export async function runSearcher(
       // Skip failed extractions
     }
 
-    emit({
-      type: 'extraction-progress',
-      extracted: extractedSources.length,
-      total: urlsToExtract.length,
-    })
+    callbacks.onExtractionProgress(extractedSources.length, urlsToExtract.length)
   }
 
   return extractedSources

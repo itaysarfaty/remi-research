@@ -1,6 +1,11 @@
 import { streamText } from 'ai'
 import { openai } from '@ai-sdk/openai'
-import type { ResearchSource, StreamEvent } from '@/types'
+import type { ResearchSource } from '@/types'
+
+export interface WriterCallbacks {
+  onReportDelta: (delta: string) => void
+  onSources: (sources: ResearchSource[]) => void
+}
 
 const WRITER_SYSTEM = `You are a storyteller who writes about food. You turn research into vivid, easy-to-read stories that feel like a friend telling you something fascinating over dinner.
 
@@ -21,7 +26,7 @@ Rules:
 export async function runWriter(
   query: string,
   sources: ResearchSource[],
-  emit: (event: StreamEvent) => void,
+  callbacks: WriterCallbacks,
 ): Promise<void> {
   const sourceContext = sources
     .map(
@@ -40,7 +45,7 @@ export async function runWriter(
 
   for await (const delta of result.textStream) {
     fullReport += delta
-    emit({ type: 'report-delta', delta })
+    callbacks.onReportDelta(delta)
   }
 
   // Parse cited source numbers from the report
@@ -54,5 +59,5 @@ export async function runWriter(
 
   // Emit only the cited sources
   const citedSources = sources.filter((s) => citedNumbers.has(s.index))
-  emit({ type: 'sources', sources: citedSources })
+  callbacks.onSources(citedSources)
 }

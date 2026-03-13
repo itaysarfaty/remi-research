@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import type { ResearchSource, StreamEvent } from '@/types'
+import type { WriterCallbacks } from '@/research/writer.ts'
 import { getErrorMessage } from '@/lib/utils'
 import { runGateKeeper } from '@/research/gate-keeper.ts'
 import { runPlanner } from '@/research/planner.ts'
@@ -10,7 +11,7 @@ import { env } from '@/env'
 
 function runMockWriter(
   sources: ResearchSource[],
-  emit: (event: StreamEvent) => void,
+  callbacks: WriterCallbacks,
 ): void {
   const citedSources = sources.slice(0, 3)
   const citations = citedSources.map((s) => `[${s.index}]`).join(', ')
@@ -28,10 +29,10 @@ function runMockWriter(
   ]
 
   for (const delta of mockReport) {
-    emit({ type: 'report-delta', delta })
+    callbacks.onReportDelta(delta)
   }
 
-  emit({ type: 'sources', sources: citedSources })
+  callbacks.onSources(citedSources)
 }
 
 async function runResearchPipeline(
@@ -55,7 +56,13 @@ async function runResearchPipeline(
 
     // Stage 3: Search
     emit({ type: 'stage', stage: 'searching' })
-    const sources = await runSearcher(plan, emit)
+    const sources = await runSearcher(plan, {
+      onBatch: (batch) => emit({ type: 'search-batch', batch }),
+      onBatchUrls: (batchIndex, urls) => emit({ type: 'batch-urls', batchIndex, urls }),
+      onSearchResults: (count) => emit({ type: 'search-results', count }),
+      onStartExtraction: () => emit({ type: 'stage', stage: 'extracting' }),
+      onExtractionProgress: (extracted, total) => emit({ type: 'extraction-progress', extracted, total }),
+    })
 
     if (sources.length === 0) {
       throw new Error('No sources found for this topic.')
@@ -64,10 +71,15 @@ async function runResearchPipeline(
     // Stage 4: Write
     emit({ type: 'stage', stage: 'writing' })
 
+    const writerCallbacks: WriterCallbacks = {
+      onReportDelta: (delta) => emit({ type: 'report-delta', delta }),
+      onSources: (sources) => emit({ type: 'sources', sources }),
+    }
+
     if (env.SKIP_WRITE === 'true') {
-      runMockWriter(sources, emit)
+      runMockWriter(sources, writerCallbacks)
     } else {
-      await runWriter(gateKeeperResult.normalizedQuery, sources, emit)
+      await runWriter(gateKeeperResult.normalizedQuery, sources, writerCallbacks)
     }
 
     emit({ type: 'stage', stage: 'complete' })
