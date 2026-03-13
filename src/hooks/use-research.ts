@@ -85,18 +85,40 @@ function reducer(state: ResearchState, event: Action): ResearchState {
     case 'sources':
       return { ...state, citedSources: event.sources }
     case 'error':
-      return { ...state, error: event.message, stage: 'error', errorAtStage: state.stage }
+      return {
+        ...state,
+        error: event.message,
+        stage: 'error',
+        errorAtStage: state.stage,
+      }
   }
 }
 
 const uiSteps = [
-  { key: 'planning' as const, label: 'Planning research', stages: ['validating', 'planning'] as PipelineStage[] },
-  { key: 'searching' as const, label: 'Searching the web', stages: ['searching', 'extracting'] as PipelineStage[] },
-  { key: 'writing' as const, label: 'Writing report', stages: ['writing'] as PipelineStage[] },
+  {
+    key: 'planning' as const,
+    label: 'Planning research',
+    stages: ['validating', 'planning'] as PipelineStage[],
+  },
+  {
+    key: 'searching' as const,
+    label: 'Searching the web',
+    stages: ['searching', 'extracting'] as PipelineStage[],
+  },
+  {
+    key: 'writing' as const,
+    label: 'Writing report',
+    stages: ['writing'] as PipelineStage[],
+  },
 ]
 
 const allStagesOrdered: PipelineStage[] = [
-  'validating', 'planning', 'searching', 'extracting', 'writing', 'complete',
+  'validating',
+  'planning',
+  'searching',
+  'extracting',
+  'writing',
+  'complete',
 ]
 
 function getGroupStatus(
@@ -138,11 +160,19 @@ function dedupliceDomains(urls: SearchUrl[]) {
 }
 
 function deriveTimelineProgress(state: ResearchState): TimelineProgress {
-  const { stage, errorAtStage, plan, searchBatches, batchUrls, searchResultsCount } = state
+  const {
+    stage,
+    errorAtStage,
+    plan,
+    searchBatches,
+    batchUrls,
+    searchResultsCount,
+  } = state
 
-  const searchLabel = searchResultsCount > 0
-    ? `Searching · ${searchResultsCount} sources`
-    : 'Searching the web'
+  const searchLabel =
+    searchResultsCount > 0
+      ? `Searching · ${searchResultsCount} sources`
+      : 'Searching the web'
 
   const steps: TimelineStep[] = uiSteps.map((step) => ({
     key: step.key,
@@ -240,7 +270,14 @@ export function useResearch(query: string | null, key: number = 0) {
 
   const timelineProgress = useMemo(
     () => deriveTimelineProgress(state),
-    [state.stage, state.errorAtStage, state.plan, state.searchBatches, state.batchUrls, state.searchResultsCount],
+    [
+      state.stage,
+      state.errorAtStage,
+      state.plan,
+      state.searchBatches,
+      state.batchUrls,
+      state.searchResultsCount,
+    ],
   )
 
   return { state, timelineProgress }
