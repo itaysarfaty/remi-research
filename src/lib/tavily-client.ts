@@ -5,59 +5,52 @@ import {
   persist,
   type TavilySearchResult,
   type TavilyExtractResult,
+  type TavilyCacheEntry,
+  type CachedBatch,
 } from '@/lib/tavily-cache'
 
-const cacheOnly = env.USE_TAVILY_CACHE === 'true'
+export const useCache = env.USE_TAVILY_CACHE === 'true'
 
 const client = tavily({ apiKey: env.TAVILY_API_KEY })
 
+export async function loadCached(term: string): Promise<TavilyCacheEntry> {
+  return load(term)
+}
+
+export async function cacheBatches(
+  term: string,
+  batches: CachedBatch[],
+): Promise<void> {
+  const data = await load(term)
+  data.batches = batches
+  await persist()
+}
+
 export async function search(
+  term: string,
   query: string,
   options?: { maxResults?: number; searchDepth?: 'basic' | 'advanced' },
 ): Promise<TavilySearchResult> {
-  const data = await load()
-
-  if (data.searches[query]) {
-    return data.searches[query]
-  }
-
-  if (cacheOnly) {
-    return { results: [] }
-  }
-
   const result = await client.search(query, options)
+
+  const data = await load(term)
   data.searches[query] = result as TavilySearchResult
   await persist()
 
   return result as TavilySearchResult
 }
 
-export async function extract(urls: string[]): Promise<TavilyExtractResult> {
-  const data = await load()
+export async function extract(
+  term: string,
+  urls: string[],
+): Promise<TavilyExtractResult> {
+  const result = await client.extract(urls)
 
-  const cached: TavilyExtractResult['results'] = []
-  const uncached: string[] = []
-
-  for (const url of urls) {
-    if (data.extractions[url]) {
-      cached.push(data.extractions[url])
-    } else {
-      uncached.push(url)
-    }
-  }
-
-  if (uncached.length === 0 || cacheOnly) {
-    return { results: cached }
-  }
-
-  const result = await client.extract(uncached)
-
+  const data = await load(term)
   for (const r of result.results) {
     data.extractions[r.url] = r as TavilyExtractResult['results'][number]
   }
   await persist()
 
-  return {
-    results: [...cached, ...result.results] as TavilyExtractResult['results'],
-  }
+  return result as TavilyExtractResult
 }

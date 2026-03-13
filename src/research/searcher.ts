@@ -29,10 +29,74 @@ const queryBatchesSchema = z.object({
   ),
 })
 
+async function runSearcherFromCache(
+  plan: ResearchPlan,
+  emit: (event: StreamEvent) => void,
+): Promise<ResearchSource[]> {
+  const cached = await tavilyClient.loadCached(plan.query)
+
+  const allUrls = new Map<string, { title: string; url: string; score: number }>()
+
+  for (let i = 0; i < cached.batches.length; i++) {
+    const batch = cached.batches[i]
+
+    emit({
+      type: 'search-batch',
+      batch: {
+        batchIndex: i,
+        label: batch.label,
+        queries: batch.queries,
+      },
+    })
+
+    const batchNewUrls: SearchUrl[] = []
+
+    for (const query of batch.queries) {
+      const searchResult = cached.searches[query]
+      if (!searchResult) continue
+
+      for (const r of searchResult.results) {
+        if (!allUrls.has(r.url)) {
+          allUrls.set(r.url, { title: r.title, url: r.url, score: r.score })
+          batchNewUrls.push({ url: r.url, title: r.title })
+        }
+      }
+    }
+
+    emit({ type: 'batch-urls', batchIndex: i, urls: batchNewUrls })
+  }
+
+  emit({ type: 'search-results', count: allUrls.size })
+  emit({ type: 'stage', stage: 'extracting' })
+
+  const extractions = Object.values(cached.extractions)
+  const sources: ResearchSource[] = extractions.map((r, i) => {
+    const meta = allUrls.get(r.url)
+    return {
+      index: i + 1,
+      url: r.url,
+      title: meta?.title ?? r.url,
+      content: r.rawContent,
+    }
+  })
+
+  emit({
+    type: 'extraction-progress',
+    extracted: sources.length,
+    total: sources.length,
+  })
+
+  return sources
+}
+
 export async function runSearcher(
   plan: ResearchPlan,
   emit: (event: StreamEvent) => void,
 ): Promise<ResearchSource[]> {
+  if (tavilyClient.useCache) {
+    return runSearcherFromCache(plan, emit)
+  }
+
   // Generate search queries
   const topicsSummary = plan.topics
     .map((t) => `[${t.section}] ${t.topic}: ${t.description}`)
@@ -44,6 +108,12 @@ export async function runSearcher(
     prompt: `Generate search queries for research on "${plan.query}".\n\nTopics:\n${topicsSummary}`,
     output: Output.object({ schema: queryBatchesSchema }),
   })
+
+  // Cache the batch metadata
+  await tavilyClient.cacheBatches(
+    plan.query,
+    output.batches.map((b) => ({ label: b.label, queries: b.queries })),
+  )
 
   // Search in batches
   const allUrls = new Map<
@@ -63,7 +133,7 @@ export async function runSearcher(
     const results = await Promise.all(
       batch.queries.map((q) =>
         tavilyClient
-          .search(q, { maxResults: 5, searchDepth: 'advanced' })
+          .search(plan.query, q, { maxResults: 5, searchDepth: 'advanced' })
           .catch(() => ({
             results: [] as Array<{
               url: string
@@ -108,7 +178,7 @@ export async function runSearcher(
 
   for (const chunk of chunks) {
     try {
-      const extracted = await tavilyClient.extract(chunk.map((u) => u.url))
+      const extracted = await tavilyClient.extract(plan.query, chunk.map((u) => u.url))
 
       for (const result of extracted.results) {
         const meta = allUrls.get(result.url)

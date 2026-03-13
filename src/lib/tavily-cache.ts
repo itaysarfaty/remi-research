@@ -18,43 +18,48 @@ interface TavilyExtractResult {
   }>
 }
 
-interface TavilyCache {
+interface CachedBatch {
+  label: string
+  queries: string[]
+}
+
+interface TavilyCacheEntry {
+  batches: CachedBatch[]
   searches: Record<string, TavilySearchResult>
   extractions: Record<string, TavilyExtractResult['results'][number]>
 }
 
+type TavilyCache = Record<string, TavilyCacheEntry>
+
 const cachePath = resolve(process.cwd(), 'tavily-cache.json')
-let data: TavilyCache | null = null
+let store: TavilyCache | null = null
 
-const defaultCache: TavilyCache = {
-  searches: {},
-  extractions: {},
-}
-
-const cacheIsEmpty = (cache: TavilyCache): boolean => {
-  return (
-    Object.keys(cache.searches).length === 0 &&
-    Object.keys(cache.extractions).length === 0
-  )
-}
-
-export async function load(): Promise<TavilyCache> {
-  if (data) return data
+async function loadStore(): Promise<TavilyCache> {
+  if (store) return store
 
   try {
     const raw = await readFile(cachePath, 'utf-8')
-    const parsed = JSON.parse(raw)
-    data = cacheIsEmpty(parsed) ? defaultCache : parsed
+    store = JSON.parse(raw)
   } catch {
-    data = defaultCache
+    store = {}
   }
 
-  return data!
+  return store!
+}
+
+export async function load(term: string): Promise<TavilyCacheEntry> {
+  const s = await loadStore()
+
+  if (!s[term]) {
+    s[term] = { batches: [], searches: {}, extractions: {} }
+  }
+
+  return s[term]
 }
 
 export async function persist(): Promise<void> {
-  if (!data) return
-  await writeFile(cachePath, JSON.stringify(data, null, 2), 'utf-8')
+  if (!store) return
+  await writeFile(cachePath, JSON.stringify(store, null, 2), 'utf-8')
 }
 
-export type { TavilySearchResult, TavilyExtractResult, TavilyCache }
+export type { TavilySearchResult, TavilyExtractResult, TavilyCacheEntry, CachedBatch }
