@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { runResearchPipeline } from '@/research/ai/pipeline'
-import type { ResearchEvent } from '@/types'
+import { createResearchStream } from '@/research/create-stream'
 
 export const Route = createFileRoute('/api/research')({
   server: {
@@ -16,32 +15,7 @@ export const Route = createFileRoute('/api/research')({
           })
         }
 
-        const encoder = new TextEncoder()
-
-        const stream = new ReadableStream({
-          async start(controller) {
-            const emit = (event: ResearchEvent) => {
-              const data = `data: ${JSON.stringify(event)}\n\n`
-              controller.enqueue(encoder.encode(data))
-            }
-
-            try {
-              await runResearchPipeline(query, emit)
-            } catch {
-              const errorEvent: ResearchEvent = {
-                type: 'error',
-                message: 'Pipeline failed unexpectedly',
-              }
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`),
-              )
-            } finally {
-              controller.close()
-            }
-          },
-        })
-
-        return new Response(stream, {
+        return new Response(createResearchStream(query), {
           headers: {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
