@@ -1,18 +1,14 @@
 import { generateText, Output } from 'ai'
 import { openai } from '@ai-sdk/openai'
-import { tavily } from '@tavily/core'
 import { z } from 'zod/v4'
 import { SEARCH_QUERY_SYSTEM } from './prompts.ts'
-import { env } from '@/env.ts'
-import { getCachedEntry } from './tavily-cache.ts'
+import * as tavilyClient from './tavily-client.ts'
 import type {
   ResearchPlan,
   SearchBatch,
   ResearchSource,
   ResearchEvent,
 } from '@/types'
-
-const tavilyClient = tavily({ apiKey: env.TAVILY_API_KEY })
 
 const queryBatchesSchema = z.object({
   batches: z.array(
@@ -23,59 +19,10 @@ const queryBatchesSchema = z.object({
   ),
 })
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function runSearcherFromCache(
-  query: string,
-  emit: (event: ResearchEvent) => void,
-): Promise<ResearchSource[]> {
-  const entry = await getCachedEntry(query)
-  if (!entry) return []
-
-  for (const batch of entry.searchBatches) {
-    emit({ type: 'search-batch', batch })
-    await sleep(300)
-
-    const batchUrl = entry.batchUrls.find(
-      (b) => b.batchIndex === batch.batchIndex,
-    )
-    if (batchUrl) {
-      emit({
-        type: 'batch-urls',
-        batchIndex: batchUrl.batchIndex,
-        urls: batchUrl.urls,
-      })
-    }
-    await sleep(200)
-  }
-
-  emit({ type: 'search-results', count: entry.searchResultsCount })
-  emit({ type: 'stage', stage: 'extracting' })
-
-  const total = entry.sources.length
-  const chunkSize = 5
-  for (let i = 0; i < total; i += chunkSize) {
-    await sleep(100)
-    emit({
-      type: 'extraction-progress',
-      extracted: Math.min(i + chunkSize, total),
-      total,
-    })
-  }
-
-  return entry.sources
-}
-
 export async function runSearcher(
   plan: ResearchPlan,
   emit: (event: ResearchEvent) => void,
 ): Promise<ResearchSource[]> {
-  if (env.USE_TAVILY_CACHE === 'true') {
-    return runSearcherFromCache(plan.query, emit)
-  }
-
   // Generate search queries
   const topicsSummary = plan.topics
     .map((t) => `[${t.section}] ${t.topic}: ${t.description}`)
@@ -126,7 +73,6 @@ export async function runSearcher(
           allUrls.set(r.url, { title: r.title, url: r.url, score: r.score })
           batchNewUrls.push({ url: r.url, title: r.title })
         } else if (r.score > existing.score) {
-          // Keep the highest score for this URL
           existing.score = r.score
         }
       }
