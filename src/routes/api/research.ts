@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import type { ResearchEvent } from '@/types'
+import type { StreamEvent } from '@/types'
 import { getErrorMessage } from '@/lib/utils'
 import { runGateKeeper } from '@/research/gate-keeper.ts'
 import { runPlanner } from '@/research/planner.ts'
@@ -9,7 +9,7 @@ import { runWriter } from '@/research/writer.ts'
 
 async function runResearchPipeline(
   query: string,
-  emit: (event: ResearchEvent) => void,
+  emit: (event: StreamEvent) => void,
 ): Promise<void> {
   try {
     // Stage 1: Validate
@@ -56,7 +56,7 @@ function createResearchStream(query: string): ReadableStream {
   const encoder = new TextEncoder()
   return new ReadableStream({
     async start(controller) {
-      const emit = (event: ResearchEvent) => {
+      const emit = (event: StreamEvent) => {
         const data = `data: ${JSON.stringify(event)}\n\n`
         controller.enqueue(encoder.encode(data))
       }

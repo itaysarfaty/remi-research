@@ -1,8 +1,8 @@
 import { useReducer, useEffect, useMemo } from 'react'
 import type {
   ResearchState,
-  ResearchEvent,
-  ResearchStage,
+  StreamEvent,
+  PipelineStage,
   TimelineProgress,
   TimelineStep,
   StepStatus,
@@ -23,7 +23,7 @@ const initialState: ResearchState = {
   error: null,
 }
 
-type Action = ResearchEvent | { type: 'reset' }
+type Action = StreamEvent | { type: 'reset' }
 
 function reducer(state: ResearchState, event: Action): ResearchState {
   switch (event.type) {
@@ -68,19 +68,19 @@ function reducer(state: ResearchState, event: Action): ResearchState {
 }
 
 const uiSteps = [
-  { key: 'planning' as const, label: 'Planning research', stages: ['validating', 'planning'] as ResearchStage[] },
-  { key: 'searching' as const, label: 'Searching the web', stages: ['searching', 'extracting'] as ResearchStage[] },
-  { key: 'writing' as const, label: 'Writing report', stages: ['writing'] as ResearchStage[] },
+  { key: 'planning' as const, label: 'Planning research', stages: ['validating', 'planning'] as PipelineStage[] },
+  { key: 'searching' as const, label: 'Searching the web', stages: ['searching', 'extracting'] as PipelineStage[] },
+  { key: 'writing' as const, label: 'Writing report', stages: ['writing'] as PipelineStage[] },
 ]
 
-const allStagesOrdered: ResearchStage[] = [
+const allStagesOrdered: PipelineStage[] = [
   'validating', 'planning', 'searching', 'extracting', 'writing', 'complete',
 ]
 
 function getGroupStatus(
-  groupStages: ResearchStage[],
-  currentStage: ResearchStage,
-  errorAtStage: ResearchStage | null,
+  groupStages: PipelineStage[],
+  currentStage: PipelineStage,
+  errorAtStage: PipelineStage | null,
 ): StepStatus {
   const firstIdx = allStagesOrdered.indexOf(groupStages[0])
   const lastIdx = allStagesOrdered.indexOf(groupStages[groupStages.length - 1])
@@ -190,7 +190,7 @@ export function useResearch(query: string | null, key: number = 0) {
             const trimmed = line.trim()
             if (!trimmed.startsWith('data: ')) continue
             try {
-              const event = JSON.parse(trimmed.slice(6)) as ResearchEvent
+              const event = JSON.parse(trimmed.slice(6)) as StreamEvent
               dispatch(event)
             } catch {
               // Skip malformed events
@@ -200,7 +200,7 @@ export function useResearch(query: string | null, key: number = 0) {
 
         if (buffer.trim().startsWith('data: ')) {
           try {
-            const event = JSON.parse(buffer.trim().slice(6)) as ResearchEvent
+            const event = JSON.parse(buffer.trim().slice(6)) as StreamEvent
             dispatch(event)
           } catch {
             // Skip

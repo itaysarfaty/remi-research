@@ -6,7 +6,7 @@ import type {
   ResearchPlan,
   SearchBatch,
   ResearchSource,
-  ResearchEvent,
+  StreamEvent,
 } from '@/types'
 
 const SEARCH_QUERY_SYSTEM = `You are a search query generator for culinary research. Given a list of research topics about a dish or ingredient, generate web search queries that will find high-quality, informative content.
@@ -30,7 +30,7 @@ const queryBatchesSchema = z.object({
 
 export async function runSearcher(
   plan: ResearchPlan,
-  emit: (event: ResearchEvent) => void,
+  emit: (event: StreamEvent) => void,
 ): Promise<ResearchSource[]> {
   // Generate search queries
   const topicsSummary = plan.topics

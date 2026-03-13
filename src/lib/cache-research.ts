@@ -1,7 +1,7 @@
 import { runGateKeeper } from '@/research/gate-keeper'
 import { runPlanner } from '@/research/planner'
 import { runSearcher } from '@/research/searcher'
-import type { ResearchEvent } from '@/types'
+import type { StreamEvent } from '@/types'
 
 const query = process.argv[2]
 
@@ -12,7 +12,7 @@ if (!query) {
 
 console.log(`\nResearching: "${query}"\n`)
 
-const emit = (event: ResearchEvent) => {
+const emit = (event: StreamEvent) => {
   switch (event.type) {
     case 'stage':
       console.log(`  [stage] ${event.stage}`)

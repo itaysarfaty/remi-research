@@ -1,4 +1,4 @@
-export type ResearchStage =
+export type PipelineStage =
   | 'idle'
   | 'validating'
   | 'planning'
@@ -45,8 +45,8 @@ export interface ResearchSource {
 }
 
 // Discriminated union for all SSE events
-export type ResearchEvent =
-  | { type: 'stage'; stage: ResearchStage }
+export type StreamEvent =
+  | { type: 'stage'; stage: PipelineStage }
   | { type: 'gate-keeper'; result: GateKeeperResult }
   | { type: 'plan'; plan: ResearchPlan }
   | { type: 'search-batch'; batch: SearchBatch }
@@ -82,9 +82,9 @@ export interface TimelineProgress {
 
 // Client-side state managed by useReducer
 export interface ResearchState {
-  stage: ResearchStage
+  stage: PipelineStage
   /** The last stage before an error occurred */
-  errorAtStage: ResearchStage | null
+  errorAtStage: PipelineStage | null
   gateKeeperResult: GateKeeperResult | null
   plan: ResearchPlan | null
   searchBatches: SearchBatch[]

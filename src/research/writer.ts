@@ -1,6 +1,6 @@
 import { streamText } from 'ai'
 import { openai } from '@ai-sdk/openai'
-import type { ResearchSource, ResearchEvent } from '@/types'
+import type { ResearchSource, StreamEvent } from '@/types'
 
 const WRITER_SYSTEM = `You are a storyteller who writes about food. You turn research into vivid, easy-to-read stories that feel like a friend telling you something fascinating over dinner.
 
@@ -21,7 +21,7 @@ Rules:
 export async function runWriter(
   query: string,
   sources: ResearchSource[],
-  emit: (event: ResearchEvent) => void,
+  emit: (event: StreamEvent) => void,
 ): Promise<void> {
   const sourceContext = sources
     .map(
